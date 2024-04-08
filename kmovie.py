@@ -42,7 +42,6 @@ print(cast_list[0][0])
 for i in cast_list:
     print(i)
 
-
-
+curs.execute("SELECT name, director, cast, writer FROM movie WHERE cast LIKE '%공유,%'")
 
 conn.close()
