@@ -7,14 +7,12 @@ def BFS(v, id_list):
     
     queue.append(id_list[0][0])
     
-    print(queue)
     visited[queue[0]] = True
-    closer = [-1, -1, ""] * v # 순서대로 parent id, 영화 id, 본인 이름
-    cnt = 0
+    parent = [[-1, -1, ""]] * v # In order parentId, movieId, selfname
     
     findP = False
     
-    
+    # finding person2 with BFS
     while queue:
         a = queue.popleft()
         sql = "SELECT peopleName, peopleId, movieId FROM kmovieCast WHERE movieId IN (SELECT movieId FROM kmovieCast WHERE peopleId = %s AND role = 'actor') AND peopleName != '' AND peopleId IS NOT NULL;"
@@ -27,49 +25,45 @@ def BFS(v, id_list):
             #print(type(index))
             if visited[index] is False:
                 queue.append(i[1])
-                closer[i[1]] = [a, i[2], i[0]]
+                parent[index] = [a, i[2], i[0]]
+                visited[index] = True
             if i[1] == id_list[1][0]:
                 findP = True
-                pid = i[1]
                 break
         if findP is True:
-            print("찾았당")
             break
-        print("한바퀴 돌았다")
-        print(queue)
     
+    index = id_list[1][0]
     
-    ## 내일의 나경이에게
-    ## 루트까지 찾음
-    ## 최단경로만 찾으면 됨
-    
-    print(closer)
-    
-    parent = id_list[0][0]
-    
-    while pid != parent:
-        print(closer[pid])
-        pid = closer[pid][0]
+    # Finding route for person1 -> person2
+    result = deque();
+    while True:
+        if parent[index][0] == -1 or index == id_list[0][0]:
+            sql = "SELECT name FROM people WHERE id = %s;"
+            curs.execute(sql, id_list[0][0])
+            firstN = curs.fetchall()
+            result.append(firstN[0][0])
+            break
+        else:
+            result.append(parent[index][2])
         
-        sql = "SELECT id FROM people WHERE id = "
-        curs.execute(sql, namedata)
-        id_list = curs.fetchall()
+        findMovie = parent[index][1]
         
+        sql = "SELECT name FROM kmovie WHERE id = %s;"
+        curs.execute(sql, str(findMovie))
+        edge = curs.fetchall()
+        result.append(edge[0][0])
         
+        index = parent[index][0]
         
-    
-    
-        
-        
-        
-        
+    while result:
+        print(result.pop())
+        if (result):
+            print("↓")
 
-    
-    
-    
-
+        
 # 이름은 api로 가져와야 함
-namedata = ('공유', '마동석')
+namedata = ('공유', '구교환')
 
 # 데이터베이스와 연결
 conn = pymysql.connect(host='kmoviedb.cn6my6gmusre.ap-northeast-2.rds.amazonaws.com',
@@ -80,27 +74,17 @@ conn = pymysql.connect(host='kmoviedb.cn6my6gmusre.ap-northeast-2.rds.amazonaws.
 
 curs = conn.cursor()
 
-# 서버로부터 actor 데이터 두 개 GET -> 해야하지만, 임의로 '공유'와 '비비'으로 지정
+# 서버로부터 actor 데이터 두 개 GET -> 해야하지만, 임의로 이름 두 개 설정
 
 sql = "SELECT id FROM people WHERE name = %s or name = %s;"
 curs.execute(sql, namedata)
 id_list = curs.fetchall()
-
-#for i in id_list:
-#    print(i)
-#print(id_list[0])
-
-
-#for i in cast_list:
-#    print(i)
-
 
 sql = "SELECT COUNT(*) FROM kmovieCast;"
 curs.execute(sql)
 tmp = curs.fetchall()
 
 cast_num = int(tmp[0][0])
-print(cast_num)
 
 BFS(cast_num, id_list)
 
